@@ -28,20 +28,20 @@ class CameraDecode(object):
         self.client = session.get(request_url, auth=auth, verify=False, stream=True)
         return session
 
-    def throw(self, backdata, image_hex):
+    def throw(self, back_data, image_hex):
         """
         回传数据
         """
-        if backdata is None:
+        if back_data is None:
             return
-        if self.camera_ipv4 not in backdata:
-            backdata[self.camera_ipv4] = dict()
+        if self.camera_ipv4 not in back_data:
+            back_data[self.camera_ipv4] = dict()
         object_id = str(time.time())
-        backdata[self.camera_ipv4][object_id] = dict()
-        backdata[self.camera_ipv4][object_id]['tracking_is'] = False
-        backdata[self.camera_ipv4][object_id]['hex_image'] = image_hex
+        back_data[self.camera_ipv4][object_id] = dict()
+        back_data[self.camera_ipv4][object_id]['tracking_is'] = False
+        back_data[self.camera_ipv4][object_id]['hex_image'] = image_hex
 
-    def read1(self, backdata=None):
+    def read1(self, back_data=None):
         """读取海康相机抓拍到的图片数据"""
         # --- define ---
         image_hex = str()
@@ -95,7 +95,7 @@ class CameraDecode(object):
 
             # --- fill ---
             if print_is:
-                self.throw(backdata, image_hex)
+                self.throw(back_data, image_hex)
                 image_hex = str()
                 hex_start = str()
                 hex_end = str()
@@ -105,7 +105,7 @@ class CameraDecode(object):
 
 if __name__ == '__main__':
     # --- init ---
-    middledata = {}
+    middle_data = {}
     agent = CameraDecode()
-    agent.connect_camera(camera_ipv4='10.8.21.204', camera_user='admin', camera_pass='a1234567')
+    agent.connect_camera(camera_ipv4='192.168.0.181', camera_user='admin', camera_pass='DEVdev123')
     agent.read1({})

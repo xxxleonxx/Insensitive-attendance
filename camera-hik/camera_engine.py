@@ -25,7 +25,8 @@ class CameraEngine:
         """
         更新摄像头信息
         """
-        cls.camera_info_list = cls.database.camera_get_all()
+        # cls.camera_info_list = cls.database.camera_get_all()
+        cls.camera_info_list = [['192.168.0.181', 'admin', 'DEVdev123', 0, '通道三']]
         '''从列表中获取相机ip，用户名，密码，方向，设备组信息'''
         for camera_info in cls.camera_info_list:
             cls.run_camera_info[camera_info[0]] = {'用户名': camera_info[1],
@@ -39,7 +40,7 @@ class CameraEngine:
         监听海康相机，获取人脸抓拍图片
         camera_info_list：相机信息列表，[ip, 用户名, 密码, 方向, 设备组]
         """
-        pool = ThreadPoolExecutor()  # 线程池
+        ThreadPoolExecutor()
         task_info = dict()  # {<ipv4>: (<task>, <hik>)}
         while True:
             # --- check --- 检查是否有突然掉线的相机，如果有则进行重置
@@ -68,7 +69,7 @@ class CameraEngine:
                     hik = CameraDecode()
                     session = hik.connect_camera(camera_ipv4, camera_user, camera_passwd)
                     t = threading.Thread(target=hik.read1, args=(cls.frame_dict,))
-                    t.setDaemon(True)
+                    t.daemon = True
                     t.start()
                     task_info[camera_ipv4] = t, hik
 
@@ -85,23 +86,6 @@ class CameraEngine:
                     time.sleep(60)
                     continue
 
-            # --- check done ---
-            # background_is = False
-            # if background_is is False:
-            #     results = []
-            #     for ipv4, info in task_info.items():
-            #         task, hik = info
-            #         if task:
-            #             results.append(task.done())
-            #         else:
-            #             results.append(False)
-            #     if False in results:
-            #         continue
-            #     else:
-            #         break
-
-        # pool.shutdown()
-
     @classmethod
     def run(cls):
         """
@@ -112,18 +96,8 @@ class CameraEngine:
         '''从数据库获取相机信息列表'''
         cls.update_camera_info()
         logger.info(' 获取相机信息列表')
-        # --- check ---
-        # if not cls.camera_info_list:
-        #     time.sleep(60)
-        #     continue
 
         cls.listen_hik(cls.camera_info_list)
-
-        # except Exception as exception:
-        #     debug_log('camera.camera_engine', f"m-104: exception | {exception}")
-        #     debug_log('camera.camera_engine', f"m-105: wait 1 minutes try again!")
-        #     time.sleep(60)
-        #     continue
 
 
 if __name__ == '__main__':
