@@ -25,7 +25,7 @@ class CameraEngine:
         """
         更新摄像头信息
         """
-        # cls.camera_info_list = cls.database.camera_get_all()
+        # todo 写活
         cls.camera_info_list = [['192.168.0.181', 'admin', 'DEVdev123', 0, '通道三']]
         '''从列表中获取相机ip，用户名，密码，方向，设备组信息'''
         for camera_info in cls.camera_info_list:
