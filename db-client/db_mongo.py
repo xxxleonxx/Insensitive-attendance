@@ -1,30 +1,36 @@
 import bson
+from loguru import logger
 from pymongo import MongoClient
-
+from pprint import pprint
 
 class MongoMethod(MongoClient):
     data = dict()
     ls = list()
 
-    def __init__(self, host='fra-middleware-mongo', port=27017, database='vms', username='admin', password='admin'):
-        super().__init__(f'mongodb://{username}:{password}@{host}:{port}')
+    def __init__(self, host='mongodb://localhost', port=27017, database='vms'):  # username='admin', password='admin'):
+        # super().__init__(f'mongodb://{username}:{password}@{host}:{port}')
+        super().__init__(f'mongodb://{host}:{port}')
         self.db = self[database]
 
     @staticmethod
     def check_mongodb(db_name, collection):
-        client = MongoClient('mongodb://admin:admin@192.168.0.21:7030/')
+        client = MongoClient('mongodb://admin:admin@localhost/')
         database_name = client.list_database_names()
 
         if db_name not in database_name:
-            print('error')
+            logger.error('error')
         else:
             db = client[db_name]
             collection_name = db.list_collection_names()
-            print(collection_name)
+            logger.debug(collection_name)
             if collection not in collection_name:
-                print('collection_name error')
+                logger.error('collection_name error')
             else:
-                print('true')
+                logger.debug('true')
+        return True
+
+    def creat_capped_collection(self, collection_name=None, size=1000, doc_max=1000):
+        self.db.create_collection(collection_name, capped=True, size=size, max=doc_max)
         return True
 
     def add(self, table_name, data):
@@ -42,11 +48,6 @@ class MongoMethod(MongoClient):
         target = self.db[table_name]
         return target.find()
 
-    def find_person(self, table_name, name='None'):
-        # 根据名字查询人的信息
-        target = self.db[table_name]
-        self.data = target.find({'face_name': name})
-        return self.data
 
     def get_index(self, table_name):
         target = self.db[table_name]
@@ -81,18 +82,6 @@ class MongoMethod(MongoClient):
 
         result = target.aggregate(target_dict, allowDiskUse=True)
         return result
-
-    def get_arrive_time(self, table_name, name):
-        target = self.findperson(table_name, name)
-        target_dict = target.__getitem__(0)
-        arrive_time = target_dict.get('record_at')
-        return arrive_time
-
-    def get_leave_time(self, table_name, name):
-        target = self.findperson(table_name, name)
-        target_dict = target.__getitem__(0)
-        leave_time = target_dict.get('modify_at')
-        return leave_time
 
     def get_one_by_id(self, table_name, object_id):
         """
@@ -146,3 +135,24 @@ class MongoMethod(MongoClient):
             return data
         else:
             return dict()
+
+    def get_col_list(self, table_name, condition, _dic,filed_name):
+        """
+        只返回某一列的数据（by wdj）
+        例子：
+        item = mycol.find({}, {'特征': 1, '_id': 0})
+        ll = [eval(i.get('特征')) for i in item]
+        """
+        table = self.db[table_name]
+        items = table.find(condition, _dic)
+        item = [eval(i.get(filed_name)) for i in items]
+        return item
+
+
+if __name__ == '__main__':
+    mdb = MongoMethod(database='mydatabase', host='127.0.0.1')
+    db = mdb['mydatabase']
+    mycol = db['test1']
+    item = mycol.find({}, {'特征': 1, '_id': 0})
+    ll = [eval(i.get('特征')) for i in item]
+    pprint(ll)
