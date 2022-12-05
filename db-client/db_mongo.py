@@ -154,5 +154,6 @@ if __name__ == '__main__':
     db = mdb['mydatabase']
     mycol = db['test1']
     item = mycol.find({}, {'特征': 1, '_id': 0})
-    ll = [eval(i.get('特征')) for i in item]
-    pprint(ll)
+    a = mdb.get_all('face_info')
+    # ll = [eval(i.get('特征')) for i in item]
+    pprint(a)
