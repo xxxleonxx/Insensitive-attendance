@@ -7,15 +7,17 @@ import importlib
 import json
 import os
 import threading
-
+import sys
 import cv2
 import numpy as np
 from loguru import logger
 
+sys.path.append('../db-client')
 
 class LineManage(object):
     """"""
-    mdb = importlib.import_module(f"clients.db_mongo").Client(host='mongodb://localhost', port=27017, database='vms')
+
+    mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
     line_dict = {}  # {<line_id>: <ws>} | line_id: websocket连接id | ws: websocket链接对象
 
     @classmethod

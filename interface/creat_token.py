@@ -1,10 +1,18 @@
+import importlib
 import json
+import sys
 
 import requests
+from authlib.jose import jwt
+from loguru import logger
 from sanic import Request
 from sanic import Sanic
+from sanic.exceptions import SanicException
 from sanic_jwt import exceptions
 from sanic_jwt import initialize
+
+sys.path.append('../db-client')
+mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
 
 
 class User:
@@ -47,47 +55,17 @@ app = Sanic(__name__)
 initialize(app, authenticate=authenticate)
 
 
-async def login_required(request: Request):
-    token = request.headers.get('authorization')
-  # --- check POST ---
-    if request.method == 'POST':
-        sources = await request.json()
-        tag = sources.get('tag', 'v1')
-        code = int(sources.get('code'))
-        # methods.debug_log('token.login_required', f"m-107: code -> {code} | token -> {token}")
-        if not token and tag == 'v3' and code in [1102, 8201]:
-            methods.debug_log('token.login_required', f"m-103: code -> {code}")
-            superuser = Global.mdb.get_one('User', {'username': 'admin'})
-            return {
-                'uid': str(superuser.get('_id')),
-                'username': 'admin',
-                'password': 'admin',
-                'role_id': superuser.get('role_id'),
-                'skip_is': True,
-            }
-
-    # token = request.headers.get('authorization')
-    if not token:
-        # raise HTTPException(status_code=401, detail='unauthorized access!')
-        raise HTTPException(status_code=401, headers=dict(message='unauthorized access!', code='4'))
-    try:
-        data = serializer.loads(token)
-        user = Global.mdb.get_one_by_id('User', data['id'])
-        role_id = user.get('role_id')
-        # role_acl = Global.mdb.get_one_by_id('UserRole', role_id).get('role_acl')
-        return {
-            'uid': data['id'],
-            'username': data['username'],
-            'password': data['password'],
-            'role_id': role_id,
-        }
-    except Exception as e:
-        # raise HTTPException(status_code=401, detail='unauthorized access!')
-        raise HTTPException(status_code=401, headers=dict(message='unauthorized access!', code='5'))
+def get_token_by_usr(user):
+    data = {
+        'id': user.get('uid'),
+        'username': user['username'],
+        'password': user['password'],
+    }
+    return jwt.dumps(data).decode('utf-8')
 
 
 # get token
-def send_request():
+def get_token():
     # Request
     # POST http://127.0.0.1:52055/auth
 
@@ -108,6 +86,43 @@ def send_request():
             content=response.content))
     except requests.exceptions.RequestException:
         print('HTTP Request failed')
+
+
+async def login_required(request: Request):
+    token = request.headers.get('authorization')
+    # --- check POST ---
+    if request.method == 'POST':
+        sources = await request.json()
+        tag = sources.get('tag', 'v1')
+        code = int(sources.get('code'))
+
+        if not token and tag == 'v3' and code in [1102, 8201]:  # todo 修改接口号
+            logger.info(" code -> {code}", code=code)
+            superuser = mdb.get_one('User_Config', {'username': 'admin'})
+            return {
+                'uid': str(superuser.get('_id')),
+                'username': 'admin',
+                'password': 'admin',
+                'role_id': superuser.get('role_id'),
+                'skip_is': True,
+            }
+
+    if not token:
+        raise SanicException(status_code=401, context=dict(message='unauthorized access!', code='4'))
+    try:
+
+        data = jwt.decode(token)
+        user = mdb.get_one_by_id('User_Config', data['id'])
+        role_id = user.get('role_id')
+
+        return {
+            'uid': data['id'],
+            'username': data['username'],
+            'password': data['password'],
+            'role_id': role_id,
+        }
+    except Exception:
+        raise SanicException(status_code=401, context=dict(message='unauthorized access!', code='5'))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,8 @@
 import importlib
+import sys
+sys.path.append('../db-client')
+mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
 
-mdb = importlib.import_module(f"clients.db_mongo").Client(host='mongodb://localhost', port=27017, database='vms')
 
 
 class System_Init(object):

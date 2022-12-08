@@ -150,7 +150,7 @@ class MongoMethod(MongoClient):
 
 
 if __name__ == '__main__':
-    mdb = MongoMethod(database='mydatabase', host='127.0.0.1')
+    mdb = MongoMethod(database='vms', host='127.0.0.1')
     db = mdb['mydatabase']
     mycol = db['test1']
     item = mycol.find({}, {'特征': 1, '_id': 0})

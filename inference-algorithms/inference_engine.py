@@ -3,7 +3,7 @@ import binascii
 import importlib
 import time
 import uuid
-
+import sys
 import cv2
 import numpy as np
 import schedule
@@ -11,9 +11,11 @@ from loguru import logger
 
 from face_detect import FaceDetection
 from face_recognition import FaceRecognition
+sys.path.append('../db-client')
+sys.path.append('../camera-hik')
+mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
+camera = importlib.import_module('camera_engine')
 
-camera = importlib.import_module(f'amera-hik.camera_engine')
-mdb = importlib.import_module(f"clients.db_mongo").Client(host='mongodb://localhost', port=27017, database='vms')
 
 
 def image_hex2array(hex_image):
