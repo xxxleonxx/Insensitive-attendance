@@ -1,12 +1,13 @@
 import importlib
 import sys
-from functools import wraps
-from sanic.exceptions import SanicException
-import jwt
 
+import jwt
 from loguru import logger
-sys.path.append('../db-client')
+from sanic.exceptions import SanicException
+
+sys.path.append('../db_client')
 mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
+
 
 def creat_token(user):
     data = {
@@ -16,6 +17,8 @@ def creat_token(user):
     }
     token = jwt.encode(data, 'EL_PSY_KONGROO_LEON')
     return token
+
+
 def check_token(request):
     try:
         data = jwt.decode(request.headers.get('authorization'), request.app.config.SECRET, algorithms=['HS256'])
@@ -53,6 +56,3 @@ async def login_required(request):
         }
     else:
         raise SanicException(status_code=401, context=dict(message='unauthorized access!', code='4'))
-
-
-

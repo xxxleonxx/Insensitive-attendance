@@ -2,7 +2,7 @@ import importlib
 import sys
 
 
-sys.path.append('../db-client')
+sys.path.append('../db_client')
 mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
 
 

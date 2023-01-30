@@ -11,8 +11,8 @@ from loguru import logger
 
 from face_detect import FaceDetection
 from face_recognition import FaceRecognition
-sys.path.append('../db-client')
-sys.path.append('../camera-hik')
+sys.path.append('../db_client')
+sys.path.append('../camera_hik')
 mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
 camera = importlib.import_module('camera_engine')
 

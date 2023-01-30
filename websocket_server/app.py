@@ -65,6 +65,8 @@ def generate_app():
             else:
                 logger.exception(exception)
 
-    def app_run():
-        LineManage.run_background()
-        app.run(host='127.0.0.1', port=10080)
+def app_run():
+    LineManage.run_background()
+    app.run(host='127.0.0.1', port=10080)
+
+

@@ -10,7 +10,7 @@ from sanic_cors import CORS
 
 from creat_token import login_required,creat_token
 
-sys.path.append('../db-client')
+sys.path.append('../db_client')
 sys.path.append('../interface/route')
 app = Sanic(__name__)
 app.config.SECRET = 'EL_PSY_KONGROO_LEON'
@@ -26,6 +26,9 @@ ROUTE = \
 
         1101: 'route_1100.action_1101',  # 保存主题设置
         1102: 'route_1100.action_1102',  # 获取主题设置
+
+        9001: 'route_9000.action_9001',  # 启动闸机控制
+        9002: 'route_9000.action_9002',  # 关闭闸机控制
 
     }
 methods_list = {}

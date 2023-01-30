@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from loguru import logger
 
-sys.path.append('../db-client')
+sys.path.append('../db_client')
 
 class LineManage(object):
     """"""
