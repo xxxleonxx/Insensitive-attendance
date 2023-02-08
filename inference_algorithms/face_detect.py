@@ -1,12 +1,9 @@
 """
 人脸检测、人脸对齐
 """
+
 import numpy as np
 from skimage import transform as trans
-import onnxruntime
-import os.path as osp
-import cv2
-
 
 src1 = np.array([[51.642, 50.115], [57.617, 49.990], [35.740, 69.007],
                  [51.157, 89.050], [57.025, 89.702]],
@@ -43,7 +40,6 @@ arcface_src = np.expand_dims(arcface_src, axis=0)
 
 
 # In[66]:
-
 
 # lmk is prediction; src is template
 def estimate_norm(lmk, image_size=112, mode='arcface'):
@@ -82,6 +78,12 @@ def norm_crop(img, landmark, image_size=112, mode='arcface'):
     return warped
 
 
+import onnxruntime
+
+import os.path as osp
+import cv2
+
+onnxruntime.set_default_logger_severity(3)  # 屏蔽onnxruntime 无用警告
 
 
 def softmax(z):
@@ -145,7 +147,7 @@ def distance2kps(points, distance, max_shape=None):
 class FaceDetection:
     def __init__(self, model_file=None, session=None):
         if not model_file:
-            model_file = './resources/models/stage02_recognize.onnx'
+            model_file = '/home/taiwu/Project/resources/models/scrfd_500m_kps.onnx'
 
         self.model_file = model_file
         self.session = session
@@ -153,8 +155,8 @@ class FaceDetection:
         if self.session is None:
             assert self.model_file is not None
             assert osp.exists(self.model_file)
-            # self.session = onnxruntime.InferenceSession(self.model_file, None)  # for cpu
-            self.session = onnxruntime.InferenceSession(self.model_file, providers=['CUDAExecutionProvider'])  # for gpu
+            self.session = onnxruntime.InferenceSession(self.model_file, None)  # for cpu
+            # self.session = onnxruntime.InferenceSession(self.model_file, providers=['CUDAExecutionProvider'])  # for gpu
         self.center_cache = {}
         self.nms_thresh = 0.4
         self.det_thresh = 0.5
@@ -262,23 +264,8 @@ class FaceDetection:
             if key in self.center_cache:
                 anchor_centers = self.center_cache[key]
             else:
-                # solution-1, c style:
-                # anchor_centers = np.zeros( (height, width, 2), dtype=np.float32 )
-                # for i in range(height):
-                #    anchor_centers[i, :, 1] = i
-                # for i in range(width):
-                #    anchor_centers[:, i, 0] = i
-
-                # solution-2:
-                # ax = np.arange(width, dtype=np.float32)
-                # ay = np.arange(height, dtype=np.float32)
-                # xv, yv = np.meshgrid(np.arange(width), np.arange(height))
-                # anchor_centers = np.stack([xv, yv], axis=-1).astype(np.float32)
-
                 # solution-3:
                 anchor_centers = np.stack(np.mgrid[:height, :width][::-1], axis=-1).astype(np.float32)
-                # print(anchor_centers.shape)
-
                 anchor_centers = (anchor_centers * stride).reshape((-1, 2))
                 if self._num_anchors > 1:
                     anchor_centers = np.stack([anchor_centers] * self._num_anchors, axis=1).reshape((-1, 2))
@@ -446,8 +433,9 @@ class FaceDetection:
 
 if __name__ == '__main__':
     # --- init ---
-    model_path = '../'
-    model_path += 'stage02_recognize.onnx'
+    # model_path = '../'
+    onnxruntime.set_default_logger_severity(3)
+    model_path = '/home/taiwu/Project/resources/models/scrfd_500m_kps.onnx'
     # model_path = 'models/scrfd/stage02_recognize.onnx'
     # model_path = 'models/scrfd/scrfd_2.5g_kps.onnx'
     agent = FaceDetection(model_file=model_path)
@@ -457,11 +445,10 @@ if __name__ == '__main__':
     # img_path = '/home/server/resources/TestData/2022/0315/IMG_20220315_101522.jpg'
     # img_path = '/home/server/resources/TestData/2022/0315/20220318173524.jpg'
     # img_path = '/home/server/resources/TestData/2022/0315/worker_003.jpg'
-    img_path = '../test.jpg'
+    img_path = '/home/taiwu/Project/resources/models/3.jpeg'
     image_array = cv2.imread(img_path)
     results = agent.inference_with_image_array(image_array)
     # cv2.imwrite('output-face.jpg', results[0]['align_face'])
     cv2.imshow('face', results[0]['raw_face'])
     cv2.imshow('align_face', results[0]['align_face'])
     cv2.waitKey()
-

@@ -1,21 +1,19 @@
 import importlib
 import sys
 import time
+sys.path.append('..')
 
-import jwt
 from loguru import logger
 from sanic import Sanic, Request, response
 from sanic.response import json
 from sanic_cors import CORS
-
-from creat_token import login_required,creat_token
-
-sys.path.append('../db_client')
-sys.path.append('../interface/route')
-app = Sanic(__name__)
+from db_client.db_mongo import MongoMethod
+from interface.creat_token import login_required,creat_token
+# from iterface.routes import
+app = Sanic('my_app')
 app.config.SECRET = 'EL_PSY_KONGROO_LEON'
 CORS(app, supports_credentials=True)
-mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
+mdb = MongoMethod(database='vms', host='127.0.0.1', port=27017)
 app.ext.dependency(login_required)
 
 ROUTE = \
@@ -26,7 +24,7 @@ ROUTE = \
 
         1101: 'route_1100.action_1101',  # 保存主题设置
         1102: 'route_1100.action_1102',  # 获取主题设置
-
+        5001: 'route_5000.action_5001',  # 获取主题设置
         9001: 'route_9000.action_9001',  # 启动闸机控制
         9002: 'route_9000.action_9002',  # 关闭闸机控制
 
@@ -67,7 +65,8 @@ def _get_method_by_code(code, tag='v3'):
                 return methods_list[code]
             else:
                 file_name, method_name = ROUTE.get(code).split('.')
-                script = importlib.import_module(f"routes.{file_name}")
+                script = importlib.import_module("interface/routes.{file_name}")
+                logger.debug(script)
                 method = getattr(script, method_name)
                 methods_list[code] = method
 

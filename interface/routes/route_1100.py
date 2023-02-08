@@ -1,6 +1,6 @@
 import importlib
 import sys
-
+from loguru import logger
 
 sys.path.append('../db_client')
 mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
@@ -30,7 +30,7 @@ async def action_1102(**sources):
     # --- get GlobalVariable.ThemeSettings ---
     unique_dict = {'name': 'ThemeSettings'}
     item = mdb.get_one('GlobalVariable', unique_dict)
-
+    logger.debug(item)
     # --- check ---
     if not item:
         return dict(code=1, details=f"something is wrong.")

@@ -1,7 +1,11 @@
 import bson
+import numpy as np
+
 from loguru import logger
 from pymongo import MongoClient
-from pprint import pprint
+from sanic_jinja2 import SanicJinja2
+from sanic_motor import BaseModel
+
 
 class MongoMethod(MongoClient):
     data = dict()
@@ -11,6 +15,36 @@ class MongoMethod(MongoClient):
         # super().__init__(f'mongodb://{username}:{password}@{host}:{port}')
         super().__init__(f'mongodb://{host}:{port}')
         self.db = self[database]
+        self.job_num_list = []
+        self.face_name_list = []
+        self.feature_list = []
+        self.department_list = []
+        self.person_type_list = []
+
+    def load_info(self):
+        """
+        从数据库加载相关字段数据
+        :return: all_job_num: 包含所有员工的工号的列表
+                 all_name: 包含所有员工的姓名的列表
+                 all_face_code: 包含所有员工的人脸特征码的列表
+                 all_department: 包含所有员工的部门的列表
+                 all_person_type: 包含所有人员类型的列表
+        """
+        self.job_num_list.clear()
+        self.face_name_list.clear()
+        self.feature_list.clear()
+        self.department_list.clear()
+        self.person_type_list.clear()
+
+        face_info = self.db['face_info'].find()
+        for info in face_info:
+            self.job_num_list.append(info.get('工号'))
+            self.face_name_list.append(info.get('姓名'))
+            self.feature_list.append(np.frombuffer(info.get('特征'), dtype=np.float32))
+            self.department_list.append(info.get('部门'))
+            self.person_type_list.append(info.get('人员类型'))
+        logger.info('加载人脸数据，数量: {quantity}', quantity=len(self.job_num_list))
+        return
 
     @staticmethod
     def check_mongodb(db_name, collection):
@@ -47,7 +81,6 @@ class MongoMethod(MongoClient):
     def get_all(self, table_name):
         target = self.db[table_name]
         return target.find()
-
 
     def get_index(self, table_name):
         target = self.db[table_name]
@@ -136,7 +169,7 @@ class MongoMethod(MongoClient):
         else:
             return dict()
 
-    def get_col_list(self, table_name, condition, _dic,filed_name):
+    def get_col_list(self, table_name, condition, _dic, filed_name):
         """
         只返回某一列的数据（by wdj）
         例子：
@@ -150,10 +183,21 @@ class MongoMethod(MongoClient):
 
 
 if __name__ == '__main__':
+
     mdb = MongoMethod(database='vms', host='127.0.0.1')
-    db = mdb['mydatabase']
-    mycol = db['test1']
-    item = mycol.find({}, {'特征': 1, '_id': 0})
     a = mdb.get_all('face_info')
-    # ll = [eval(i.get('特征')) for i in item]
-    pprint(a)
+
+    job_num_list = []
+    face_name_list = []
+    feature_list = []
+    department_list = []
+    person_type_list = []
+    for info in a:
+        job_num_list.append(info.get('工号'))
+        face_name_list.append(info.get('姓名'))
+        feature_list.append(np.frombuffer(info.get('特征'), dtype=np.float32))
+        department_list.append(info.get('部门'))
+        person_type_list.append(info.get('人员类型'))
+    print(job_num_list)
+    print(face_name_list)
+    print(feature_list)

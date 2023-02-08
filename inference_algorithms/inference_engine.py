@@ -1,20 +1,23 @@
-import binascii
-# from camera-hik.camera_engine import CameraEngine
-import importlib
 import time
 import uuid
 import sys
-import cv2
+import binascii
+import threading
 import numpy as np
+import cv2
 import schedule
-from loguru import logger
+import datetime
 
-from face_detect import FaceDetection
-from face_recognition import FaceRecognition
-sys.path.append('../db_client')
-sys.path.append('../camera_hik')
-mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
-camera = importlib.import_module('camera_engine')
+from loguru import logger
+# from apscheduler.schedulers.blocking import BlockingScheduler
+sys.path.append('..')
+from camera_hik.camera_engine import CameraEngine
+import db_client.db_mongo
+from inference_algorithms.face_detect import FaceDetection
+from inference_algorithms.face_recognition import FaceRecognition
+
+
+mdb = db_client.db_mongo.MongoMethod(database='vms', host='127.0.0.1', port=27017)
 
 
 
@@ -59,18 +62,24 @@ class InferenceEngine:
         '''人脸检测、人脸对齐'''
 
         features, face_img = cls.extract_feature(image)
-
+        logger.debug('人脸检测开始')
         if features is not None:
+            # logger.debug(face_encodings)
             face_distance = np.linalg.norm(face_encodings - features, axis=1)  # 计算人脸特征向量的距离
+            logger.debug(face_distance)
             index = np.argmin(face_distance)  # 获取最小距离对应的索引
             """计算相似度"""
             sim = cls.FaceRecognition.search_face_v2(features, face_encodings[index])  # face_encodings 人脸库特征向量集
+            logger.debug(sim)
             unique_dict = {'name': 'face_similarity'}
-            if sim > (mdb.get_one('GlobalVariable', unique_dict) / 100.):
-                face_name = mdb.get_one_by_id('Face', face_uuid).get('face_name')
-                job_number = mdb.get_one_by_id('Face', face_uuid).get('job_number')
-                department = cls.database.department_list[index]
-                person_type = cls.database.person_type_list[index]
+            item = mdb.get_one('GlobalVariable', unique_dict)
+            data = item.get('args', {})
+            face_dist = data.get('known_face_filter_dist')
+            if sim > face_dist:
+                job_num = mdb.job_num_list[index]
+                name = mdb.name_list[index]
+                department = mdb.department_list[index]
+                person_type = mdb.person_type_list[index]
                 # print(job_num, name, department, person_type)
                 return True, {'工号': job_num, '姓名': name, '部门': department, '类型': person_type}
 
@@ -80,44 +89,54 @@ class InferenceEngine:
     def identify_logic(cls):
         while True:
             try:
-                if len(list(camera.CameraEngine.frame_dict.values())) == 0:
-                    time.sleep(0.05)
+
+                if len(list(CameraEngine.frame_dict.values())) == 0:
+
                     continue
-                if len(cls.database.feature_list) == 0:
-                    time.sleep(0.1)
-                    continue
-                face_encodings = np.asarray(list(cls.database.feature_list))
-                for ipv4 in list(camera.CameraEngine.frame_dict.keys()):
-                    for time_stack in list(camera.CameraEngine.frame_dict[ipv4].keys()):
-                        hex_image = camera.CameraEngine.frame_dict[ipv4][time_stack]['hex_image']
+
+                # if len(mdb.feature_list) == 0:
+                #     time.sleep(0.1)
+                #     logger.info(2)
+                #     continue
+
+                face_encodings = np.asarray(list(mdb.feature_list))
+
+                for ipv4 in list(CameraEngine.frame_dict.keys()):
+                    for time_stack in list(CameraEngine.frame_dict[ipv4].keys()):
+                        hex_image = CameraEngine.frame_dict[ipv4][time_stack]['hex_image']
                         image_array = image_hex2array(hex_image)
                         success, result_dict = cls.recognition(image_array, face_encodings)
-                        file_path = f"./temp/{uuid.uuid4()}.jpg"
+                        save_at = datetime.datetime.now().strftime('%Y-%m%d-%H%M%S-%f')
+                        file_path = f"/home/taiwu/Project/Data_Storage_directory/imge_data/{save_at}.jpg"
                         cv2.imwrite(file_path, image_array)
+                        target = dict()
                         if success:
                             logger.info('识别成功 {ipv4} {result_dict}.', ipv4=ipv4, result_dict=result_dict)
-                            camera_direction = camera.CameraEngine.run_camera_info[ipv4]['方向']
-                            device_group = camera.CameraEngine.run_camera_info[ipv4]['设备组']
-                            result_dict['方向'] = camera_direction
-                            result_dict['设备组'] = device_group
+                            camera_direction = CameraEngine.run_camera_info[ipv4]['方向']
+                            device_group = CameraEngine.run_camera_info[ipv4]['设备组']
+
+                            target = {'姓名':result_dict.get('姓名'), '工号':result_dict.get('工号'),'方向':camera_direction,'设备组':device_group}
                             cls.recognition_result.append(result_dict)  # 向识别结果列表中添加结果信息
-                            cls.database.add_to_client(result_dict['工号'], result_dict['姓名'], device_group,
-                                                       file_path)
+                            mdb.add('record_table', target)
                         else:
-                            device_group = camera.CameraEngine.run_camera_info[ipv4]['设备组']
-                            # queue.put({"state": 1, "group": device_group, "image": image_array})
-                            cls.database.add_to_client('999999999999999999', "陌生人", device_group, file_path)
+                            device_group = CameraEngine.run_camera_info[ipv4]['设备组']
+                            result_dict['设备组'] = device_group
+                            target = {'姓名':'陌生人', '工号':'11111111','设备组':device_group}
+                            mdb.add('record_table', target)
                             logger.info('陌生人员,请登记.')
                         '''清理摄像头ip列表中的已检测完毕图片'''
-                        camera.CameraEngine.frame_dict[ipv4].pop(time_stack)
+                        CameraEngine.frame_dict[ipv4].pop(time_stack)
 
             except Exception as exception:
-                logger.error(exception)
+                logger.exception(exception)
                 break
 
     @classmethod
     def run(cls):
         """启动人脸检测、识别推断引擎"""
+        cls.FaceDetector.inference_with_image_array(np.zeros((400, 400, 3), dtype=np.uint8))
+        logger.info("初始化人脸检测器成功")
+        cls.FaceRecognition.get_face_features_normalization_by_image_array(np.zeros((112, 112, 3), dtype=np.uint8))
         while True:
             try:
                 cls.identify_logic()
@@ -130,7 +149,15 @@ class InferenceEngine:
 
     @classmethod
     def reload_face_lib(cls):  # todo 用apscheduler替换schedule
-        schedule.every(120).seconds.do(cls.database.load_info)
+        logger.info('同步启动')
+        schedule.every(120).seconds.do(mdb.load_info)
         while True:
             schedule.run_pending()
             time.sleep(3)
+
+
+if __name__ == '__main__':
+    p1 = threading.Thread(target=CameraEngine.run)
+    p2 = threading.Thread(target=InferenceEngine.run)
+    p1.start()
+    p2.start()

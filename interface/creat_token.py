@@ -1,13 +1,11 @@
-import importlib
 import sys
-
 import jwt
 from loguru import logger
 from sanic.exceptions import SanicException
 
-sys.path.append('../db_client')
-mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
-
+sys.path.append('..')
+from db_client.db_mongo import MongoMethod
+mdb = MongoMethod(database='vms', host='127.0.0.1', port=27017)
 
 def creat_token(user):
     data = {

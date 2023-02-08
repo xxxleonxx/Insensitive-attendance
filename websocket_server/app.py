@@ -1,9 +1,11 @@
 import json
+import sys
+sys.path.append('..')
 from loguru import logger
 from sanic import Sanic
-from line_manage import LineManage
+from websocket_server.line_manage import LineManage
 
-app = Sanic()
+app = Sanic('myapp')
 
 
 def is_json(string):
@@ -65,8 +67,14 @@ def generate_app():
             else:
                 logger.exception(exception)
 
+
 def app_run():
-    LineManage.run_background()
-    app.run(host='127.0.0.1', port=10080)
+    # LineManage.run_background()
+    app.run(host='127.0.0.1', port=10083, single_process=True, debug=True)
 
 
+if __name__ == '__main__':
+    #app_run()
+    # server.py
+
+    app.run(host='0.0.0.0', port=1337, access_log=False)

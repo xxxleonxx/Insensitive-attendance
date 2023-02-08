@@ -9,11 +9,11 @@ import time
 
 class CameraDecode(object):
     def __init__(self):
-        self.camera_ipv4 = None     # 相机ip
-        self.camera_user = None     # 相机用户名
-        self.camera_pass = None     # 相机密码
-        self.client = None          # 用于向相机发送请求获取人脸照片的客户端
-        self.last_receive_at = None     # 上次收到返回图片的时间
+        self.camera_ipv4 = None  # 相机ip
+        self.camera_user = None  # 相机用户名
+        self.camera_pass = None  # 相机密码
+        self.client = None  # 用于向相机发送请求获取人脸照片的客户端
+        self.last_receive_at = None  # 上次收到返回图片的时间
 
     def connect_camera(self, camera_ipv4, camera_user, camera_pass):
         """
@@ -108,4 +108,5 @@ if __name__ == '__main__':
     middle_data = {}
     agent = CameraDecode()
     agent.connect_camera(camera_ipv4='192.168.0.181', camera_user='admin', camera_pass='DEVdev123')
-    agent.read1({})
+    agent.read1(middle_data)
+    print(middle_data)

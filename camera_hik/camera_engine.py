@@ -1,6 +1,8 @@
-# from util.db_operate import DB
+import sys
+
+sys.path.append('..')
 from loguru import logger
-from camera_decode import CameraDecode
+from camera_hik.camera_decode import CameraDecode
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,7 +12,7 @@ import threading
 class CameraEngine:
     """
     """
-    # database = DB()
+
     camera_info_list = []  # 相机信息列表，当手动添加设备后，会调用DB.camera_get_all方法给其刷新赋值
 
     '''用于存放正在运行的摄像头信息。例如{'192.168.0.1':'用户名': 'xxx', '密码': 'xxx', '方向':'xxx', '设备组':'xxx'},
@@ -26,7 +28,7 @@ class CameraEngine:
         更新摄像头信息
         """
         # todo 写活
-        cls.camera_info_list = [['192.168.0.181', 'admin', 'DEVdev123', 0, '通道三']]
+        cls.camera_info_list = [('192.168.0.180', 'admin', 'DEVdev123', 0, '通道三')]
         '''从列表中获取相机ip，用户名，密码，方向，设备组信息'''
         for camera_info in cls.camera_info_list:
             cls.run_camera_info[camera_info[0]] = {'用户名': camera_info[1],
@@ -40,7 +42,7 @@ class CameraEngine:
         监听海康相机，获取人脸抓拍图片
         camera_info_list：相机信息列表，[ip, 用户名, 密码, 方向, 设备组]
         """
-        ThreadPoolExecutor()
+        pool = ThreadPoolExecutor()
         task_info = dict()  # {<ipv4>: (<task>, <hik>)}
         while True:
             # --- check --- 检查是否有突然掉线的相机，如果有则进行重置
@@ -53,6 +55,7 @@ class CameraEngine:
                 now_at = time.time()
                 if hik.last_receive_at and now_at - hik.last_receive_at > 60:
                     task_info[ipv4] = None, None
+                    logger.debug("receive_at {last_receive_at}", last_receive_at = hik.last_receive_at)
 
             # --- check --- 检查不存活的相机，进行尝试
             for item in camera_info_list:
@@ -66,18 +69,15 @@ class CameraEngine:
                     continue
 
                 try:
+
                     hik = CameraDecode()
                     session = hik.connect_camera(camera_ipv4, camera_user, camera_passwd)
                     t = threading.Thread(target=hik.read1, args=(cls.frame_dict,))
                     t.daemon = True
                     t.start()
                     task_info[camera_ipv4] = t, hik
-
                     cls.run_camera_info[camera_ipv4]['task'] = t
                     cls.run_camera_info[camera_ipv4]['session'] = session
-                    # task = pool.submit(hik.read1, cls.frame_dict)
-
-                    # task_info[camera_ipv4] = task, hik
                     logger.debug('{camera}is connected.', camera=camera_ipv4)
 
                 except Exception as exception:
@@ -85,7 +85,6 @@ class CameraEngine:
                     logger.debug('wait 1 minutes try again!')
                     time.sleep(60)
                     continue
-
     @classmethod
     def run(cls):
         """
@@ -99,6 +98,16 @@ class CameraEngine:
 
         cls.listen_hik(cls.camera_info_list)
 
+    @classmethod
+    def get_data(cls):
+        while True:
+            ll = cls.frame_dict
+            logger.debug(ll)
+            time.sleep(10)
 
 if __name__ == '__main__':
+    z = threading.Thread(target=CameraEngine.get_data)
+    z.daemon = True
+    z.start()
     CameraEngine.run()
+

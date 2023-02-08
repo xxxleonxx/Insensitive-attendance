@@ -11,13 +11,13 @@ import sys
 import cv2
 import numpy as np
 from loguru import logger
-
-sys.path.append('../db_client')
+sys.path.append('..')
+from db_client.db_mongo import MongoMethod
 
 class LineManage(object):
     """"""
 
-    mdb = importlib.import_module("db_mongo").MongoMethod(database='vms', host='127.0.0.1', port=27017)
+    mdb = MongoMethod(database='vms', host='127.0.0.1', port=27017)
     line_dict = {}  # {<line_id>: <ws>} | line_id: websocket连接id | ws: websocket链接对象
 
     @classmethod
